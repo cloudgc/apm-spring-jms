@@ -1,2 +1,1 @@
 spring-jms-5.x=org.apache.skywalking.apm.plugin.spring.jms.define.SpringJmsConsumerInstrumentation
-spring-jms-5.x=org.apache.skywalking.apm.plugin.spring.jms.define.ActiveMQConnectionFactoryInstrumentation

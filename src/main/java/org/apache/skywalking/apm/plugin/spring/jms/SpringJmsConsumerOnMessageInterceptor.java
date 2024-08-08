@@ -36,39 +36,7 @@ public class SpringJmsConsumerOnMessageInterceptor implements InstanceMethodsAro
         if (message == null) {
             return;
         }
-
-        String url = UrlUtil.getUrl();
-        AbstractSpan activeSpan = null;
-
-        if (message.getJMSDestination() instanceof Queue || message.getJMSDestination() instanceof TemporaryQueue) {
-            String queueName = ((Queue) message.getJMSDestination()).getQueueName();
-
-            activeSpan =
-                    ContextManager.createEntrySpan("ActiveMQ/Queue/" + queueName + "/Consumer", null).start(
-                            System.currentTimeMillis());
-            Tags.MQ_BROKER.set(activeSpan, url);
-            Tags.MQ_QUEUE.set(activeSpan, queueName);
-
-        } else if (message.getJMSDestination() instanceof Topic ||
-                   message.getJMSDestination() instanceof TemporaryTopic) {
-            String topicName = ((Topic) message.getJMSDestination()).getTopicName();
-            activeSpan =
-                    ContextManager.createEntrySpan("ActiveMQ/Topic/" + topicName + "/Consumer", null).start(
-                            System.currentTimeMillis());
-
-            Tags.MQ_BROKER.set(activeSpan, url);
-            Tags.MQ_TOPIC.set(activeSpan, topicName);
-
-        }
-        if (activeSpan == null) {
-            return;
-        }
-
         ContextCarrier contextCarrier = new ContextCarrier();
-
-        activeSpan.setPeer(url);
-        activeSpan.setComponent(ComponentsDefine.ACTIVEMQ_CONSUMER);
-        SpanLayer.asMQ(activeSpan);
         CarrierItem next = contextCarrier.items();
 
         while (next.hasNext()) {
@@ -78,8 +46,22 @@ public class SpringJmsConsumerOnMessageInterceptor implements InstanceMethodsAro
                 next.setHeadValue(propertyValue.toString());
             }
         }
+        AbstractSpan jms =  // ContextManager.createLocalSpan("JMS/MessageListener");
+                ContextManager.createEntrySpan("JMS/MessageListener", contextCarrier);
+        if (message.getJMSDestination() instanceof Queue || message.getJMSDestination() instanceof TemporaryQueue) {
+            String queueName = ((Queue) message.getJMSDestination()).getQueueName();
+            Tags.MQ_QUEUE.set(jms, queueName);
 
-        ContextManager.extract(contextCarrier);
+        } else if (message.getJMSDestination() instanceof Topic ||
+                   message.getJMSDestination() instanceof TemporaryTopic) {
+            String topicName = ((Topic) message.getJMSDestination()).getTopicName();
+
+            Tags.MQ_TOPIC.set(jms, topicName);
+
+        }
+        jms.setComponent(ComponentsDefine.SPRING_ANNOTATION);
+        SpanLayer.asRPCFramework(jms);
+
     }
 
     @Override
