@@ -47,6 +47,13 @@ public class SpringJmsConsumerOnMessageInterceptor implements InstanceMethodsAro
             }
         }
         String destination = message.getJMSDestination().toString();
+
+        if (message.getJMSDestination() instanceof Queue || message.getJMSDestination() instanceof TemporaryQueue) {
+            destination = ((Queue) message.getJMSDestination()).getQueueName();
+        } else if (message.getJMSDestination() instanceof Topic ||
+                   message.getJMSDestination() instanceof TemporaryTopic) {
+            destination = ((Topic) message.getJMSDestination()).getTopicName();
+        }
         AbstractSpan jms = ContextManager.createEntrySpan("JmsListener/" + destination, contextCarrier);
         jms.setComponent(ComponentsDefine.SPRING_ANNOTATION);
         SpanLayer.asRPCFramework(jms);
